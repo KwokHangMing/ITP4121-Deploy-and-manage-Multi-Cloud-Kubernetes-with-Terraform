@@ -5,7 +5,7 @@ provider "kubernetes" {
   client_certificate     = base64decode(google_container_cluster.primary.master_auth[0].client_certificate)
   cluster_ca_certificate = base64decode(google_container_cluster.primary.master_auth[0].cluster_ca_certificate)
   client_key             = base64decode(google_container_cluster.primary.master_auth[0].client_key)
-  # config_path            = "~/.kube/config"
+  config_path            = "~/.kube/config"
 }
 
 # resource "kubernetes_namespace" "itp4121-namespace" {
@@ -19,8 +19,15 @@ data "google_container_cluster" "primary" {
   location = google_container_cluster.primary.location
 }
 
-data "local_file" "deployment" {
-  filename = "${path.module}/deployment.yaml"
+# data "local_file" "deployment" {
+#   filename = "${path.module}/deployment.yaml"
+# }
+
+data "terraform_remote_state" "gke" {
+  backend = "local"
+  config = {
+    path = "${path.module}/terraform.tfstate"
+  }
 }
 
 # resource "kubernetes_manifest" "deployment" {
@@ -65,19 +72,18 @@ resource "google_container_cluster" "primary" {
   network             = google_compute_network.test.name
   subnetwork          = google_compute_subnetwork.subnet1.name
   logging_service     = "logging.googleapis.com/kubernetes"
+  monitoring_service  = "monitoring.googleapis.com/kubernetes"
 
   node_pool {
     name = "terraform-node-pool"
     autoscaling {
-      min_node_count = 1
+      min_node_count = 2
       max_node_count = 3
     }
     node_config {
       service_account = google_service_account.project.email
       oauth_scopes = [
-        "https://www.googleapis.com/auth/cloud-platform",
-        "https://www.googleapis.com/auth/logging.write",
-        "https://www.googleapis.com/auth/monitoring"
+        "https://www.googleapis.com/auth/cloud-platform"
       ]
     }
   }
@@ -109,8 +115,7 @@ resource "kubernetes_persistent_volume_claim" "app" {
     access_modes = ["ReadWriteOnce"]
     resources {
       requests = {
-        storage = "10Gi"
-        # deletion_protection = false
+        storage = "100Gi"
       }
     }
     volume_name        = kubernetes_persistent_volume.app.metadata[0].name
@@ -123,7 +128,7 @@ resource "kubernetes_deployment" "app" {
     name = "app"
   }
   spec {
-    replicas = 3
+    replicas = 2
     selector {
       match_labels = {
         app = "app"
@@ -141,12 +146,12 @@ resource "kubernetes_deployment" "app" {
           image = var.image_url
           resources {
             limits = {
-              cpu    = "0.5"
-              memory = "512Mi"
+              cpu    = "1"
+              memory = "2Gi"
             }
             requests = {
-              cpu    = "250m"
-              memory = "50Mi"
+              cpu    = "100m"
+              memory = "745Mi"
             }
           }
           volume_mount {
@@ -154,7 +159,7 @@ resource "kubernetes_deployment" "app" {
             name       = "app"
           }
           port {
-            container_port = 8080
+            container_port = 80
           }
         }
         volume {
@@ -193,12 +198,12 @@ resource "kubernetes_service" "app" {
   }
   spec {
     selector = {
-      app = "app"
+      app = kubernetes_deployment.app.spec[0].template[0].metadata[0].labels.app
     }
     port {
       protocol    = "TCP"
       port        = 80
-      target_port = 8080
+      target_port = 80
     }
     type             = "LoadBalancer"
     session_affinity = "ClientIP"
@@ -221,7 +226,7 @@ resource "kubernetes_ingress_v1" "primary" {
             service {
               name = kubernetes_service.app.metadata[0].name
               port {
-                number = 80
+                number = 8080
               }
             }
           }

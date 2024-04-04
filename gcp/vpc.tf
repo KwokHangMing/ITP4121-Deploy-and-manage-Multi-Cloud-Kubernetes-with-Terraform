@@ -23,7 +23,21 @@ resource "google_compute_firewall" "basic" {
     ports    = ["80", "8080"]
   }
 
-  source_tags = ["web"]
+  # source_tags = ["web"]
+  source_ranges = ["0.0.0.0"]
+}
+
+resource "google_compute_firewall" "https" {
+  name    = "allow-https"
+  network = google_compute_network.test.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["443"]
+  }
+
+  # source_tags = ["web"]
+  source_ranges = ["0.0.0.0"]
 }
 
 resource "google_compute_subnetwork" "subnet1" {
