@@ -78,7 +78,7 @@ resource "google_container_cluster" "primary" {
     name = "terraform-node-pool"
     autoscaling {
       min_node_count = 2
-      max_node_count = 3
+      max_node_count = 4
     }
     node_config {
       service_account = google_service_account.project.email
@@ -150,8 +150,8 @@ resource "kubernetes_deployment" "app" {
               memory = "2Gi"
             }
             requests = {
-              cpu    = "100m"
-              memory = "745Mi"
+              cpu    = "50m"
+              memory = "500Mi"
             }
           }
           volume_mount {
@@ -179,7 +179,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "app" {
   }
   spec {
     max_replicas = 10
-    min_replicas = 3
+    min_replicas = 2
     scale_target_ref {
       api_version = "apps/v1"
       kind        = "Deployment"

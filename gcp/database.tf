@@ -47,6 +47,16 @@ resource "kubernetes_stateful_set" "postgresql" {
         container {
           name  = "postgresql"
           image = "postgres:alpine3.19"
+          resources {
+            limits = {
+              cpu    = "1"
+              memory = "1Gi"
+            }
+            requests = {
+              cpu    = "50m"
+              memory = "500Mi"
+            }
+          }
           env {
             name = "POSTGRES_HOST"
             value_from {
@@ -128,6 +138,6 @@ resource "kubernetes_service" "postgresql" {
       port        = 5432
       target_port = 5432
     }
-    type = "ClusterIP"
+    type = "LoadBalancer"
   }
 }
