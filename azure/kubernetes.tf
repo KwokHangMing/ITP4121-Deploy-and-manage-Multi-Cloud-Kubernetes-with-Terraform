@@ -5,17 +5,22 @@ resource "azurerm_kubernetes_cluster" "primary" {
   dns_prefix          = "${var.name}aks"
 
   default_node_pool {
-    name       = "${var.name}"
-    node_count = 1
-    vm_size    = "Standard_D2_v2"
+    name                = var.name
+    enable_auto_scaling = true
+    min_count           = 2
+    max_count           = 3
+    vm_size             = "Standard_D2_v2"
   }
-
-  identity {
-    type = "SystemAssigned"
+  service_principal {
+    client_id     = azuread_application.app.client_id
+    client_secret = azuread_service_principal_password.app.value
+  }
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.app.id
   }
 }
 
-resource "kubernetes_service" "app" {
+resource "kubernetes_service_v1" "app" {
   metadata {
     name = "app"
   }
@@ -26,20 +31,82 @@ resource "kubernetes_service" "app" {
     port {
       protocol    = "TCP"
       port        = 80
-      target_port = 8080
+      target_port = 80
     }
-    type             = "LoadBalancer"
-    session_affinity = "ClientIP"
-    load_balancer_ip = azurerm_kubernetes_cluster.primary.http_application_routing_zone_name
+    type = "LoadBalancer"
   }
 }
 
-resource "kubernetes_deployment" "app" {
+resource "kubernetes_ingress_v1" "app" {
+  metadata {
+    name = "app-ingress"
+  }
+  spec {
+    rule {
+      host = var.domain_name
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service_v1.app.metadata[0].name
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_v1" "app" {
   metadata {
     name = "app"
   }
   spec {
-    replicas = 3
+    capacity = {
+      storage = "100Gi"
+    }
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "managed"
+    persistent_volume_source {
+      azure_disk {
+        disk_name     = azurerm_managed_disk.app.name
+        caching_mode  = "None"
+        data_disk_uri = azurerm_managed_disk.app.id
+        kind          = "Managed"
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_claim_v1" "app" {
+  metadata {
+    name      = "app"
+    namespace = "default"
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "managed"
+    resources {
+      requests = {
+        storage = "100Gi"
+      }
+    }
+    volume_name = kubernetes_persistent_volume_v1.app.metadata[0].name
+  }
+}
+
+
+resource "kubernetes_deployment_v1" "app" {
+  metadata {
+    name = "app"
+  }
+  spec {
+    replicas = 2
     selector {
       match_labels = {
         app = "app"
@@ -57,50 +124,44 @@ resource "kubernetes_deployment" "app" {
           image = var.image_url
           resources {
             limits = {
-              cpu    = "0.5"
-              memory = "512Mi"
+              cpu    = "1"
+              memory = "2Gi"
             }
             requests = {
-              cpu    = "250m"
-              memory = "50Mi"
+              cpu    = "50m"
+              memory = "500Mi"
             }
           }
           volume_mount {
             mount_path = "/app"
-            name       = "app-volume"
+            name       = "app"
           }
           port {
-            container_port = 8080
-          }
-          liveness_probe {
-            http_get {
-              path = "/"
-              port = 8080
-            }
+            container_port = 80
           }
         }
         volume {
-          name = "app-volume"
-          # persistent_volume_claim {
-          #   claim_name = kubernetes_persistent_volume_claim.primary.metadata[0].name
-          # }
+          name = "app"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim_v1.app.metadata[0].name
+          }
         }
       }
     }
   }
 }
 
-resource "kubernetes_horizontal_pod_autoscaler" "app" {
+resource "kubernetes_horizontal_pod_autoscaler_v1" "app" {
   metadata {
     name = "app"
   }
   spec {
     max_replicas = 10
-    min_replicas = 3
+    min_replicas = 2
     scale_target_ref {
       api_version = "apps/v1"
       kind        = "Deployment"
-      name        = kubernetes_deployment.app.metadata[0].name
+      name        = kubernetes_deployment_v1.app.metadata[0].name
     }
     target_cpu_utilization_percentage = 50
   }

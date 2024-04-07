@@ -1,9 +1,3 @@
-# Create a resource group
-resource "azurerm_resource_group" "primary" {
-  name     = "${var.name}-resources-group"
-  location = var.location
-}
-
 # Create a virtual network within the resource group
 resource "azurerm_virtual_network" "primary" {
   name                = "${var.name}-network"

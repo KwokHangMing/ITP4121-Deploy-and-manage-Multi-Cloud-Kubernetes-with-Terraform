@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "3.92.0"
     }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "2.47.0"
+    }
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "2.26.0"
@@ -12,7 +16,14 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
+}
+
+provider "azuread" {
 }
 
 provider "kubernetes" {

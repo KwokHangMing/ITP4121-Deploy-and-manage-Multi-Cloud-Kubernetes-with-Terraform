@@ -1,4 +1,4 @@
-echo "Please enter the cloud provider (aws, azure, gcp) or 'exit' to stop: "
+echo "Please enter the cloud provider (aws, azure, gcp) to deploy or 'exit' to stop: "
 read provider
 
 case $provider in
