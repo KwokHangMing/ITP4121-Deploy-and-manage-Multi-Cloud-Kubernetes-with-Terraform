@@ -40,6 +40,19 @@ resource "google_compute_firewall" "https" {
   source_ranges = ["0.0.0.0"]
 }
 
+resource "google_compute_firewall" "postgresql" {
+  name    = "allow-postgresql"
+  network = google_compute_network.test.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["5432"]
+  }
+
+  source_ranges = ["0.0.0.0"]
+  target_tags = ["postgresql"]
+}
+
 resource "google_compute_subnetwork" "subnet1" {
   name          = "${var.project}-itp4121-subnetwork"
   ip_cidr_range = "10.0.0.0/16"

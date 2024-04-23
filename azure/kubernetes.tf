@@ -7,7 +7,7 @@ resource "azurerm_kubernetes_cluster" "primary" {
   default_node_pool {
     name                = var.name
     enable_auto_scaling = true
-    min_count           = 2
+    min_count           = 1
     max_count           = 3
     vm_size             = "Standard_D2_v2"
   }
@@ -129,7 +129,7 @@ resource "kubernetes_deployment_v1" "app" {
             }
             requests = {
               cpu    = "50m"
-              memory = "500Mi"
+              memory = "50Mi"
             }
           }
           volume_mount {
@@ -157,7 +157,7 @@ resource "kubernetes_horizontal_pod_autoscaler_v1" "app" {
   }
   spec {
     max_replicas = 10
-    min_replicas = 2
+    min_replicas = 3
     scale_target_ref {
       api_version = "apps/v1"
       kind        = "Deployment"

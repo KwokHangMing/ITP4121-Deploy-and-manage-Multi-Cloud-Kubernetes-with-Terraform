@@ -57,7 +57,7 @@ resource "azurerm_application_insights" "appinsights" {
 }
 
 resource "azurerm_storage_account" "app" {
-  name                     = "${var.name}+${var.student_id}"
+  name                     = "${var.name}${var.student_id}"
   resource_group_name      = azurerm_resource_group.primary.name
   location                 = var.location
   account_tier             = "Standard"
