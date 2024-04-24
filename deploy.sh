@@ -1,26 +1,34 @@
-echo "Please enter the cloud provider (aws, azure, gcp) to deploy or 'exit' to stop: "
-read provider
+echo "Deploying Google Cloud Platform resources..."
 
-case $provider in
-  aws)
-    cd aws
-    ;;
-  azure)
-    cd azure
-    ;;
-  gcp)
-    cd gcp
-    ;;
-  exit)
-    echo "Exiting script."
-    exit 0
-    ;;
-  *)
-    echo "Invalid option. Exiting script."
-    exit 1
-    ;;
-esac
-
+cd gcp
 terraform init -upgrade
 # terraform plan
 terraform apply --auto-approve
+# Check if Terraform executed without errors
+if [ $? -eq 0 ]; then
+  echo "Google Cloud Platform resources deployed successfully!"
+else
+  echo "Error deploying Google Cloud Platform resources. Destroying..."
+  terraform destroy --auto-approve
+  if [ $? -ne 0 ]; then
+    echo "Error destroying Google Cloud Platform resources. Exiting..."
+    exit 1
+  fi
+fi
+cd ..
+
+echo "Deploying Azure Resources..."
+cd azure
+terraform init -upgrade
+terraform apply --auto-approve
+# Check if Terraform executed without errors
+if [ $? -eq 0 ]; then
+  echo "Azure resources deployed successfully!"
+else
+  echo "Error deploying Azure resources. Destroying..."
+  terraform destroy --auto-approve
+  if [ $? -ne 0 ]; then
+    echo "Error destroying Azure resources. Exiting..."
+    exit 1
+  fi
+fi

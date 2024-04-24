@@ -1,5 +1,6 @@
 # ITP4121-Deploy-and-manage-Multi-Cloud-Kubernetes-with-Terraform
 
+a Simple Terraform deployment to Kubernetes and PostgreSQL Stateful Set
 
 gcloud auth application-default login
 

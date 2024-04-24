@@ -1,26 +1,5 @@
-echo "Please enter the cloud provider (aws, azure, gcp) to destroy or 'exit' to stop: "
-read provider
-
-case $provider in
-  aws)
-    cd aws
-    ;;
-  azure)
-    cd azure
-    ;;
-  gcp)
-    cd gcp
-    ;;
-  exit)
-    echo "Exiting script."
-    exit 0
-    ;;
-  *)
-    echo "Invalid option. Exiting script."
-    exit 1
-    ;;
-esac
-
-terraform init
-# terraform plan
+cd gcp
+terraform destroy --auto-approve
+cd ..
+cd azure
 terraform destroy --auto-approve
